@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import settings
-from app.routes import events, health, holds, tour
+from app.routes import bookings, events, health, holds, tour
 
 app = FastAPI(title=settings.app_name, debug=settings.debug)
 
@@ -23,3 +23,4 @@ app.include_router(health.router)
 app.include_router(tour.router)
 app.include_router(events.router)
 app.include_router(holds.router)
+app.include_router(bookings.router)
