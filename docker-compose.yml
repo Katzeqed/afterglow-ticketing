@@ -1,0 +1,66 @@
+# Инфраструктура проекта одной командой: `docker compose up`.
+# Каждый сервис — отдельный контейнер; они общаются по именам (db, rabbitmq, redis).
+services:
+  # --- База данных ------------------------------------------------------
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: afterglow
+      POSTGRES_PASSWORD: afterglow
+      POSTGRES_DB: afterglow
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data   # данные переживают перезапуск
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U afterglow"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # --- Брокер очередей задач (для Celery, фаза 6) -----------------------
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"     # порт брокера
+      - "15672:15672"   # веб-панель управления: http://localhost:15672 (guest/guest)
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- Redis (результаты задач / кэш, фаза 6) ---------------------------
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  # --- Наш бэкенд FastAPI -----------------------------------------------
+  backend:
+    build: ./backend
+    # --reload: код примонтирован томом ниже, правки применяются на лету.
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    environment:
+      DATABASE_URL: postgresql+psycopg://afterglow:afterglow@db:5432/afterglow
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672//
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy       # ждём, пока БД реально готова
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app                    # локальный код виден внутри контейнера
+
+volumes:
+  pgdata:
