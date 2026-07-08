@@ -13,13 +13,7 @@ from app.models import Event, Seat, Tour, Zone
 from app.schemas.event import EventDetail, ZoneSummary
 from app.schemas.seat import SeatMapResponse, SeatOut, ZoneWithSeats
 from app.schemas.tour import EventSummary, TourResponse
-
-
-def _effective_status(seat: Seat, now: datetime) -> str:
-    """Истёкший холд трактуем как свободное место."""
-    if seat.status == "held" and seat.held_until is not None and seat.held_until < now:
-        return "available"
-    return seat.status
+from app.services.availability import effective_status as _effective_status
 
 
 def get_tour(db: Session) -> TourResponse | None:

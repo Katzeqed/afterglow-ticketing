@@ -25,5 +25,9 @@ class Settings(BaseSettings):
     # Разрешённые источники для CORS (dev-сервер фронта на Vite).
     cors_origins: list[str] = ["http://localhost:5173"]
 
+    # Параметры удержания мест.
+    hold_ttl_minutes: int = 10        # сколько держим места до оплаты
+    max_seats_per_hold: int = 8       # лимит «до 8 билетов в руки»
+
 
 settings = Settings()
