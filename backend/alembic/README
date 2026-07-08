@@ -1,0 +1,10 @@
+Миграции БД (Alembic).
+
+Сгенерировать миграцию по изменениям моделей:
+    alembic revision --autogenerate -m "описание"
+
+Накатить до последней версии:
+    alembic upgrade head
+
+В Docker:
+    docker compose exec backend alembic upgrade head
