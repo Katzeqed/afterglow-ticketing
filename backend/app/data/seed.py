@@ -62,7 +62,7 @@ def seed() -> None:
         tour = Tour(
             artist="MARLOWE",
             title="Afterglow",
-            description="MARLOWE returns with Afterglow — an intimate live tour.",
+            description="MARLOWE returns with Afterglow - an intimate live tour across Europe.",
         )
         db.add(tour)
         db.flush()

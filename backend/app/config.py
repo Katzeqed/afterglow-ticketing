@@ -22,5 +22,8 @@ class Settings(BaseSettings):
     rabbitmq_url: str = "amqp://guest:guest@localhost:5672//"
     redis_url: str = "redis://localhost:6379/0"
 
+    # Разрешённые источники для CORS (dev-сервер фронта на Vite).
+    cors_origins: list[str] = ["http://localhost:5173"]
+
 
 settings = Settings()
