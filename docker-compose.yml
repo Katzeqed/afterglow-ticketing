@@ -62,5 +62,38 @@ services:
     volumes:
       - ./backend:/app                    # локальный код виден внутри контейнера
 
+  # --- Celery worker: выполняет фоновые задачи (PDF, письма, уборка) ----
+  worker:
+    build: ./backend
+    command: celery -A app.celery_app worker --loglevel=info
+    environment:
+      DATABASE_URL: postgresql+psycopg://afterglow:afterglow@db:5432/afterglow
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672//
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      db:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+
+  # --- Celery beat: планировщик периодических задач --------------------
+  beat:
+    build: ./backend
+    command: celery -A app.celery_app beat --loglevel=info
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672//
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./backend:/app
+
 volumes:
   pgdata:

@@ -1,5 +1,6 @@
 """Роуты оформления и просмотра брони."""
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
@@ -37,3 +38,18 @@ def get_booking(reference: str, db: Session = Depends(get_db)) -> BookingRespons
     if booking is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Booking not found")
     return booking
+
+
+@router.get("/{reference}/tickets/{code}")
+def download_ticket(
+    reference: str, code: str, db: Session = Depends(get_db)
+) -> FileResponse:
+    """Скачать PDF-билета. 404, если билета нет или PDF ещё генерится."""
+    path = booking_service.get_ticket_pdf_path(db, reference, code)
+    if path is None:
+        raise HTTPException(
+            status.HTTP_404_NOT_FOUND, detail="Ticket PDF not found or not ready yet"
+        )
+    return FileResponse(
+        path, media_type="application/pdf", filename=f"ticket-{code}.pdf"
+    )

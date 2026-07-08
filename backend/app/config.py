@@ -29,5 +29,8 @@ class Settings(BaseSettings):
     hold_ttl_minutes: int = 10        # сколько держим места до оплаты
     max_seats_per_hold: int = 8       # лимит «до 8 билетов в руки»
 
+    # Ставить ли фоновые задачи (PDF/письма) после брони. В тестах — False.
+    enable_background_tasks: bool = True
+
 
 settings = Settings()

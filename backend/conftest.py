@@ -26,6 +26,15 @@ TEST_URL = os.environ.get(
 _TABLES = ["tickets", "holds", "seats", "zones", "events", "tours", "bookings"]
 
 
+@pytest.fixture(autouse=True)
+def _no_background_tasks():
+    """В тестах не ставим задачи в брокер (иначе воркер тронет основную БД)."""
+    from app.config import settings
+
+    settings.enable_background_tasks = False
+    yield
+
+
 @pytest.fixture(scope="session")
 def engine():
     # Создаём тестовую БД, если её ещё нет.

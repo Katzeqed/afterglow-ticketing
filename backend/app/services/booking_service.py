@@ -5,15 +5,32 @@
 """
 from __future__ import annotations
 
+import logging
+import os
 from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.config import settings
 from app.models import Booking, Event, Hold, Seat, Ticket
 from app.schemas.booking import BookingCreate, BookingResponse, TicketOut
 from app.services import codes, payment_service
+
+logger = logging.getLogger("afterglow.booking")
+
+
+def _dispatch_booking_tasks(booking_id: int, ticket_ids: list[int]) -> None:
+    """Ставим фоновые задачи (PDF-билеты + письмо). Ошибка брокера не рушит бронь."""
+    from app.tasks import generate_ticket_pdf, send_confirmation_email
+
+    try:
+        for ticket_id in ticket_ids:
+            generate_ticket_pdf.delay(ticket_id)
+        send_confirmation_email.delay(booking_id)
+    except Exception:
+        logger.warning("could not enqueue background tasks for booking %s", booking_id)
 
 
 class BookingError(Exception):
@@ -130,8 +147,11 @@ def create_booking(db: Session, data: BookingCreate) -> BookingResponse:
     db.add(booking)
     db.flush()
 
+    tickets: list[Ticket] = []
     for s in seats:
-        db.add(Ticket(booking_id=booking.id, seat_id=s.id, code=codes.ticket_code()))
+        ticket = Ticket(booking_id=booking.id, seat_id=s.id, code=codes.ticket_code())
+        db.add(ticket)
+        tickets.append(ticket)
         s.status = "booked"
         s.hold_id = None
         s.held_until = None
@@ -147,4 +167,24 @@ def create_booking(db: Session, data: BookingCreate) -> BookingResponse:
             return _build_response(db, existing)
         raise
 
+    # Медленное — в фон: PDF-билеты и письмо (не блокируем ответ пользователю).
+    if settings.enable_background_tasks:
+        _dispatch_booking_tasks(booking.id, [t.id for t in tickets])
+
     return _build_response(db, booking)
+
+
+def get_ticket_pdf_path(db: Session, reference: str, code: str) -> str | None:
+    """Путь к PDF билета — берётся из БД по reference+code (без path traversal)."""
+    ticket = (
+        db.execute(
+            select(Ticket)
+            .join(Booking, Ticket.booking_id == Booking.id)
+            .where(Booking.reference == reference, Ticket.code == code)
+        )
+        .scalars()
+        .first()
+    )
+    if ticket is None or not ticket.pdf_path or not os.path.exists(ticket.pdf_path):
+        return None
+    return ticket.pdf_path

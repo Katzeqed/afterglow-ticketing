@@ -5,3 +5,7 @@ psycopg[binary]
 pydantic-settings
 email-validator
 alembic
+celery
+redis
+reportlab
+qrcode[pil]

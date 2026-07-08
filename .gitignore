@@ -11,6 +11,9 @@ node_modules/
 dist/
 .vite/
 
+# Сгенерированные PDF-билеты
+backend/generated/
+
 # Прочее
 .DS_Store
 *.log
