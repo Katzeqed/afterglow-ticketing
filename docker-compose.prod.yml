@@ -1,0 +1,83 @@
+# Продакшен-стек: без --reload и монтирования кода, бэкенд только на localhost,
+# инфраструктура (db/rabbitmq/redis) не публикуется наружу.
+# Фронт собирается отдельно и раздаётся nginx; nginx же проксирует /api сюда.
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: afterglow
+      POSTGRES_PASSWORD: afterglow
+      POSTGRES_DB: afterglow
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U afterglow"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  backend:
+    build: ./backend
+    # Дефолтный CMD образа = uvicorn без reload.
+    environment:
+      DATABASE_URL: postgresql+psycopg://afterglow:afterglow@db:5432/afterglow
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672//
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "127.0.0.1:8000:8000"   # только localhost, наружу — через nginx
+    volumes:
+      - generated:/app/generated  # общий с worker том для PDF-билетов
+    depends_on:
+      db: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+  worker:
+    build: ./backend
+    command: celery -A app.celery_app worker --loglevel=info
+    environment:
+      DATABASE_URL: postgresql+psycopg://afterglow:afterglow@db:5432/afterglow
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672//
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - generated:/app/generated
+    depends_on:
+      db: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+  beat:
+    build: ./backend
+    command: celery -A app.celery_app beat --loglevel=info
+    environment:
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672//
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      rabbitmq: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  generated:
