@@ -4,6 +4,9 @@ import tailwindcss from "@tailwindcss/vite";
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  // Один экземпляр React на всё приложение (иначе framer-motion ловит
+  // "Invalid hook call / more than one copy of React").
+  resolve: { dedupe: ["react", "react-dom"] },
   server: {
     port: 5173,
     // Проксируем API на бэкенд — браузер общается только со своим origin.

@@ -108,7 +108,10 @@ export function SeatMap({
                   fillOpacity={fillOpacity}
                   stroke={stroke}
                   strokeWidth={strokeWidth}
-                  style={{ cursor: clickable ? "pointer" : "default" }}
+                  style={{
+                    cursor: clickable ? "pointer" : "default",
+                    transition: "r 0.12s ease, fill-opacity 0.15s ease",
+                  }}
                   onClick={() => clickable && onToggle(s.id)}
                 >
                   <title>

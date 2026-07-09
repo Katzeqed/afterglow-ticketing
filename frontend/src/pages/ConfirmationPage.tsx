@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import { Link, useParams } from "react-router-dom";
 
 import { getBooking, ticketPdfUrl } from "../api/endpoints";
+import { Reveal } from "../components/Reveal";
 import { formatDate, formatMoney, formatTime } from "../lib/format";
 
 export default function ConfirmationPage() {
@@ -24,22 +26,29 @@ export default function ConfirmationPage() {
 
   return (
     <div className="mx-auto max-w-2xl px-6 py-16 text-center">
-      <div className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full border border-terracotta text-terracotta">
+      <motion.div
+        initial={{ scale: 0.6, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ type: "spring", stiffness: 260, damping: 18 }}
+        className="mx-auto mb-6 flex h-14 w-14 items-center justify-center rounded-full border border-terracotta text-terracotta"
+      >
         <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="20 6 9 17 4 12" />
         </svg>
-      </div>
+      </motion.div>
 
-      <h1 className="font-display text-4xl">You're going</h1>
-      <p className="mt-3 text-sm text-muted">
-        Confirmation sent to <span className="text-ink">{booking.email}</span>. Booking{" "}
-        <span className="font-mono">{booking.reference}</span>.
-      </p>
+      <Reveal delay={0.15}>
+        <h1 className="font-display text-4xl">You're going</h1>
+        <p className="mt-3 text-sm text-muted">
+          Confirmation sent to <span className="text-ink">{booking.email}</span>. Booking{" "}
+          <span className="font-mono">{booking.reference}</span>.
+        </p>
 
-      <div className="mt-4 text-sm text-muted">
-        {booking.city} · {booking.venue} · {formatDate(booking.starts_at)} ·{" "}
-        {formatTime(booking.starts_at)}
-      </div>
+        <div className="mt-4 text-sm text-muted">
+          {booking.city} · {booking.venue} · {formatDate(booking.starts_at)} ·{" "}
+          {formatTime(booking.starts_at)}
+        </div>
+      </Reveal>
 
       {/* Билеты */}
       <ul className="mt-10 flex flex-col gap-3 text-left">
