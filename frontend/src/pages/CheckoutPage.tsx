@@ -12,6 +12,19 @@ import { formatMoney } from "../lib/format";
 import { newIdempotencyKey } from "../lib/session";
 import { useSelection } from "../store/selection";
 
+// --- Маски ввода карты ---
+function maskCardNumber(v: string): string {
+  const digits = v.replace(/\D/g, "").slice(0, 16);
+  return digits.replace(/(.{4})/g, "$1 ").trim(); // 1111 1111 1111 1111
+}
+function maskExpiry(v: string): string {
+  const digits = v.replace(/\D/g, "").slice(0, 4);
+  return digits.length <= 2 ? digits : `${digits.slice(0, 2)}/${digits.slice(2)}`;
+}
+function maskCvv(v: string): string {
+  return v.replace(/\D/g, "").slice(0, 4);
+}
+
 function Field({
   label,
   ...props
@@ -130,15 +143,16 @@ export default function CheckoutPage() {
             inputMode="numeric"
             placeholder="4242 4242 4242 4242"
             value={form.number}
-            onChange={(e) => setForm({ ...form, number: e.target.value })}
+            onChange={(e) => setForm({ ...form, number: maskCardNumber(e.target.value) })}
           />
           <div className="grid grid-cols-2 gap-5">
             <Field
               label="Expiry (MM/YY)"
               required
+              inputMode="numeric"
               placeholder="12/30"
               value={form.expiry}
-              onChange={(e) => setForm({ ...form, expiry: e.target.value })}
+              onChange={(e) => setForm({ ...form, expiry: maskExpiry(e.target.value) })}
             />
             <Field
               label="CVV"
@@ -146,7 +160,7 @@ export default function CheckoutPage() {
               inputMode="numeric"
               placeholder="123"
               value={form.cvv}
-              onChange={(e) => setForm({ ...form, cvv: e.target.value })}
+              onChange={(e) => setForm({ ...form, cvv: maskCvv(e.target.value) })}
             />
           </div>
           <Field
