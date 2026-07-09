@@ -1,6 +1,9 @@
+import { useRef, useState } from "react";
+import type { MouseEvent } from "react";
 import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
 
 import type { ZoneWithSeats } from "../api/types";
+import { formatMoney } from "../lib/format";
 
 const R = 9; // радиус места
 
@@ -13,6 +16,13 @@ interface FlatSeat {
   status: string;
   color: string;
   zoneName: string;
+  price: number;
+}
+
+interface HoverState {
+  seat: FlatSeat;
+  left: number;
+  top: number;
 }
 
 export function SeatMap({
@@ -24,6 +34,9 @@ export function SeatMap({
   selected: number[];
   onToggle: (seatId: number) => void;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [hover, setHover] = useState<HoverState | null>(null);
+
   const seats: FlatSeat[] = zones.flatMap((z) =>
     z.seats.map((s) => ({
       id: s.id,
@@ -34,6 +47,7 @@ export function SeatMap({
       status: s.status,
       color: z.color,
       zoneName: z.name,
+      price: z.price_cents,
     })),
   );
 
@@ -47,19 +61,30 @@ export function SeatMap({
   const height = maxY - minY;
   const selectedSet = new Set(selected);
 
+  function showTooltip(seat: FlatSeat, e: MouseEvent) {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    setHover({
+      seat,
+      left: e.clientX - rect.left,
+      top: e.clientY - rect.top,
+    });
+  }
+
   return (
-    <div className="w-full overflow-hidden border border-line bg-surface/40">
-      <TransformWrapper minScale={0.6} maxScale={5} centerOnInit>
-        <TransformComponent
-          wrapperStyle={{ width: "100%", height: "62vh" }}
-          contentStyle={{ width: "100%" }}
-        >
+    <div ref={containerRef} className="relative w-full">
+      <div className="w-full overflow-hidden border border-line bg-surface/40">
+        <TransformWrapper minScale={0.6} maxScale={5} centerOnInit>
+          <TransformComponent
+            wrapperStyle={{ width: "100%", height: "62vh" }}
+            contentStyle={{ width: "100%" }}
+          >
           <svg viewBox={`${minX} ${minY} ${width} ${height}`} className="w-full">
             {/* Сцена */}
             <rect
-              x={minX + width * 0.25}
+              x={minX + width * 0.28}
               y={minY + 6}
-              width={width * 0.5}
+              width={width * 0.44}
               height={8}
               rx={4}
               fill="#211e1a"
@@ -108,21 +133,47 @@ export function SeatMap({
                   fillOpacity={fillOpacity}
                   stroke={stroke}
                   strokeWidth={strokeWidth}
+                  aria-label={`${s.zoneName}, row ${s.row}, seat ${s.number}, ${s.status}`}
                   style={{
                     cursor: clickable ? "pointer" : "default",
                     transition: "r 0.12s ease, fill-opacity 0.15s ease",
                   }}
+                  onMouseMove={(e) => showTooltip(s, e)}
+                  onMouseLeave={() => setHover(null)}
                   onClick={() => clickable && onToggle(s.id)}
-                >
-                  <title>
-                    {s.zoneName} · Row {s.row}, Seat {s.number} ({s.status})
-                  </title>
-                </circle>
+                />
               );
             })}
           </svg>
-        </TransformComponent>
-      </TransformWrapper>
+          </TransformComponent>
+        </TransformWrapper>
+      </div>
+
+      {/* Плашка при наведении (переворачивается вниз у верхнего края) */}
+      {hover && (
+        <div
+          className={
+            "pointer-events-none absolute z-10 -translate-x-1/2 rounded-sm border border-line bg-paper px-3 py-2 text-xs shadow-lg " +
+            (hover.top < 80 ? "translate-y-0" : "-translate-y-full")
+          }
+          style={{ left: hover.left, top: hover.top < 80 ? hover.top + 16 : hover.top - 12 }}
+        >
+          <div className="font-semibold text-ink">{hover.seat.zoneName}</div>
+          <div className="text-muted">
+            Row {hover.seat.row} · Seat {hover.seat.number}
+          </div>
+          <div className="mt-0.5 flex items-center gap-2">
+            <span className="font-medium text-ink">
+              {formatMoney(hover.seat.price)}
+            </span>
+            {hover.seat.status !== "available" && (
+              <span className="uppercase tracking-wide text-[10px] text-terracotta">
+                {hover.seat.status === "booked" ? "Sold" : "On hold"}
+              </span>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
