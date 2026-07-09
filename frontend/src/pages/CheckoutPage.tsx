@@ -4,7 +4,7 @@ import { useMutation } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 
 import { ApiError } from "../api/client";
-import { createBooking } from "../api/endpoints";
+import { createBooking, releaseHold } from "../api/endpoints";
 import { Button } from "../components/Button";
 import { HoldTimer } from "../components/HoldTimer";
 import { useCountdown } from "../hooks/useCountdown";
@@ -119,8 +119,23 @@ export default function CheckoutPage() {
     booking.mutate();
   }
 
+  function handleBack() {
+    if (!hold) return;
+    done.current = true; // не даём «сторожу» увести на главную
+    const eventId = hold.event_id;
+    releaseHold(hold.id).catch(() => {}); // освобождаем места, не блокируя переход
+    reset();
+    navigate(`/events/${eventId}`);
+  }
+
   return (
     <div className="mx-auto max-w-4xl px-6 py-10">
+      <button
+        onClick={handleBack}
+        className="mb-4 text-xs uppercase tracking-[0.2em] text-muted transition-colors hover:text-ink"
+      >
+        ← Back to seats
+      </button>
       <div className="mb-6 flex items-center justify-between">
         <h1 className="font-display text-4xl">Checkout</h1>
         <HoldTimer expiresAt={hold.expires_at} />
