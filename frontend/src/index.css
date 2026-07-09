@@ -1,0 +1,31 @@
+@import "tailwindcss";
+
+/* Дизайн-токены Warm Analog Editorial (см. design-system/MASTER.md). */
+@theme {
+  --color-paper: #f4efe6;
+  --color-surface: #eae3d6;
+  --color-ink: #211e1a;
+  --color-muted: #6b635a;
+  --color-line: #d9d0c2;
+
+  --color-terracotta: #c0603b;
+  --color-terracotta-dark: #a34e2e;
+  --color-sage: #7a8b6f;
+  --color-amber: #d69a4c;
+
+  --font-display: "Playfair Display", Georgia, serif;
+  --font-body: "Inter", system-ui, sans-serif;
+}
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  body {
+    margin: 0;
+    background-color: var(--color-paper);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+  }
+}
